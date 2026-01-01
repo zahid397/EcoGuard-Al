@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
     const file = formData.get("file") as File;
 
     if (!file) {
-      return NextResponse.json({ error: "No image" }, { status: 400 });
+      return NextResponse.json({ error: "No image provided" }, { status: 400 });
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
@@ -17,19 +17,18 @@ export async function POST(req: NextRequest) {
     );
 
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-pro-latest", // SAFE model
+      model: "gemini-1.5-pro-latest",
     });
 
     const prompt = `
-Analyze the environment image.
+You are EcoGuard-AI.
 
-Return ONLY valid JSON:
+Analyze the image and return ONLY valid JSON:
 {
   "hazard_type": "string",
   "severity_score": number,
   "reasoning": "string",
   "detected_objects": ["string"],
-  "environment_summary": "string",
   "impacts": ["string"],
   "recommendations": ["string"],
   "future_prediction": "string"
@@ -49,13 +48,11 @@ Return ONLY valid JSON:
     let text = result.response.text();
     text = text.replace(/```json|```/g, "").trim();
 
-    const json = JSON.parse(text);
-
-    return NextResponse.json(json);
+    return NextResponse.json(JSON.parse(text));
   } catch (err: any) {
-    console.error("AI ERROR:", err.message);
+    console.error("Gemini error:", err.message);
     return NextResponse.json(
-      { error: "AI analysis failed" },
+      { error: "Gemini analysis failed" },
       { status: 500 }
     );
   }
