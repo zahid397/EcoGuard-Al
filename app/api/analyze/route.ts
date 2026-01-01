@@ -3,62 +3,57 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export async function POST(req: NextRequest) {
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      throw new Error("GEMINI_API_KEY missing");
-    }
-
-    const genAI = new GoogleGenerativeAI(apiKey);
-
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-pro", // ✅ stable + allowed
-    });
-
     const formData = await req.formData();
     const file = formData.get("file") as File;
 
     if (!file) {
-      return NextResponse.json({ error: "No image uploaded" }, { status: 400 });
+      return NextResponse.json({ error: "No image" }, { status: 400 });
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
 
+    const genAI = new GoogleGenerativeAI(
+      process.env.GEMINI_API_KEY as string
+    );
+
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-pro-latest", // SAFE model
+    });
+
+    const prompt = `
+Analyze the environment image.
+
+Return ONLY valid JSON:
+{
+  "hazard_type": "string",
+  "severity_score": number,
+  "reasoning": "string",
+  "detected_objects": ["string"],
+  "environment_summary": "string",
+  "impacts": ["string"],
+  "recommendations": ["string"],
+  "future_prediction": "string"
+}
+`;
+
     const result = await model.generateContent([
+      prompt,
       {
         inlineData: {
           data: buffer.toString("base64"),
           mimeType: file.type,
         },
       },
-      {
-        text: `
-You are EcoGuard-AI, an environmental risk analyst.
-
-Analyze the image and respond ONLY with raw JSON.
-NO markdown. NO explanation.
-
-{
-  "hazard_type": "string",
-  "severity_score": number,
-  "reasoning": "string",
-  "impacts": ["string"],
-  "recommendations": ["string"],
-  "future_prediction": "string"
-}
-        `,
-      },
     ]);
 
     let text = result.response.text();
+    text = text.replace(/```json|```/g, "").trim();
 
-    // 🛡️ safety cleanup
-    text = text.replace(/```json/g, "").replace(/```/g, "").trim();
+    const json = JSON.parse(text);
 
-    const parsed = JSON.parse(text);
-
-    return NextResponse.json(parsed);
+    return NextResponse.json(json);
   } catch (err: any) {
-    console.error("EcoGuard API error:", err);
+    console.error("AI ERROR:", err.message);
     return NextResponse.json(
       { error: "AI analysis failed" },
       { status: 500 }
