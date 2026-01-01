@@ -9,7 +9,7 @@ It analyzes real-world environmental images to **detect hazards**, **explain sci
 
 ## 🚀 Live Demo
 
-🔗 **Live App:** https://eco-guard-ai.vercel.app  
+🔗 **Live App:** https://eco-guard-al.vercel.app/
 📦 **Status:** Demo-ready (API fallback enabled for quota safety)
 
 ---
